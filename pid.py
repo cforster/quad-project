@@ -5,7 +5,7 @@ logger = logging.getLogger('pid')
 
 class PID(object):
   def __init__(self, kp=0.5, ki=0.2, kd=0.75,
-               integ_max=1000.0, out_max=100, out_min=0):
+               integ_max=100.0, out_max=100, out_min=0):
     self._kp = kp
     self._ki = ki
     self._kd = kd

@@ -1,5 +1,6 @@
 import curses
 import cv2
+import joystick_controller
 import logging
 import time
 import video_pid_controller
@@ -10,7 +11,7 @@ import cflib.crtp as crtp
 
 logger = logging.getLogger('monitor')
 
-LINK_URIS = ['debug://0/0']
+LINK_URIS = ['radio://0/10/250K']
 
 class Field(object):
   def __init__(self, label, width, var=None, vartype='float'):
@@ -25,10 +26,17 @@ FIELDS = [
     Field('PITCH', 10, 'stabilizer.pitch'),
     Field('YAW', 10, 'stabilizer.yaw'),
     Field('THRUST', 10, 'stabilizer.thrust', 'uint16_t'),
+    Field('AUTO', 10)
 ]
 
 class CfMonitor(object):
   def __init__(self, link_uri, win):
+    self._roll = 0.0
+    self._pitch = 0.0
+    self._yaw = 0.0
+    self._thrust = 0
+    self._auto = False
+
     self._link_uri = link_uri
     self._win = win
     self._cf = crazyflie.Crazyflie()
@@ -36,7 +44,8 @@ class CfMonitor(object):
     logger.info('Opening link to ' + link_uri)
     self._cf.open_link(link_uri)
 
-  def __del__(self):
+  def Shutdown(self):
+    logger.error('Deleting cf')
     self._cf.close_link()
 
   def _onConnect(self, link_uri):
@@ -57,15 +66,31 @@ class CfMonitor(object):
     pos = 0
     for field in FIELDS:
       if field.var is None:
-        s = self._link_uri
+        if field.label == 'URI':
+          s = self._link_uri
+        elif field.label == 'AUTO':
+          s = 'on' if self._auto else 'off'
       else:
         s = str(data[field.var])
       self._win.addnstr(0, pos, s, field.width - 1)
       pos += field.width
     self._win.refresh()
 
-  def SetSetpoint(self, roll, pitch, yawrate, thrust):
-    self._cf.commander.send_setpoint(roll, pitch, yawrate, thrust)
+  def SetRoll(self, roll):
+    self._roll = roll
+
+  def SetPitch(self, pitch):
+    self._pitch = pitch
+
+  def SetYaw(self, yaw):
+    self._yaw = yaw
+
+  def SetThrust(self, thrust):
+    self._thrust = thrust
+
+  def UpdateCommander(self):
+    self._cf.commander.send_setpoint(
+        self._roll, self._pitch, self._yaw, self._thrust)
 
 
 class CursesWindowLogHandler(logging.Handler):
@@ -113,30 +138,32 @@ if __name__ == '__main__':
     cfmonitors.append(CfMonitor(uri, win))
     pos += 1
 
-  controller = video_pid_controller.VideoPIDController(cfmonitors[0])
+  video_controller = video_pid_controller.VideoPIDController(cfmonitors[0])
+  joy_controller = joystick_controller.JoystickController(cfmonitors[0])
 
   try:
     while True:
-      controller.Step()
+      auto = joy_controller.GetAuto()
+      cfmonitors[0]._auto = auto
+      video_controller.SetAuto(auto)
+      video_controller.Step()
+      joy_controller.Step()
+      for cfmonitor in cfmonitors:
+        cfmonitor.UpdateCommander()
       c = stdscr.getch()
       if c != -1:
-        if c == ord('a'):
-          controller.SetThrust(controller.GetThrust() + 1000)
-        elif c == ord('z'):
-          controller.SetThrust(controller.GetThrust() - 1000)
-        elif c == ord('k'):
-          logger.info('Killing thrust')
-          controller.SetThrust(0)
-        elif c == ord('q'):
+        if c == ord('q'):
           break
       time.sleep(0.016)
       cv2.waitKey(1)
   except KeyboardInterrupt:
     logger.info('Keyboard interrupt - shutting down')
   finally:
+    logger.error('finally')
+    for cfmonitor in cfmonitors:
+      cfmonitor.Shutdown()
     stdscr.keypad(0)
     curses.nocbreak()
     curses.echo()
     curses.curs_set(1)
     curses.endwin()
-    del cfmonitors

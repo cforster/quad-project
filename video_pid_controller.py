@@ -1,14 +1,15 @@
 import cv2
 import logging
 import pid
+import sys
 
 logger = logging.getLogger('video_pid_controller')
 
-CANNY_THRESHOLD = 20
+CANNY_THRESHOLD = 15
 PITCH_ROLL_RANGE = 10
 
 class VideoPIDController(object):
-  def __init__(self, cfmonitor, window_name='Controller', camera_index=0):
+  def __init__(self, cfmonitor, window_name='Controller', camera_index=1):
     self._cfmonitor = cfmonitor
     self._window_name = window_name
 
@@ -17,7 +18,6 @@ class VideoPIDController(object):
     self._width = self._capture.get(3)
     self._height = self._capture.get(4)
 
-    self._thrust = 0
     self._x_target = self._width / 2
     self._y_target = self._height / 2
     self._x_pid = pid.PID(out_min=-PITCH_ROLL_RANGE, out_max=PITCH_ROLL_RANGE)
@@ -25,11 +25,13 @@ class VideoPIDController(object):
     self._y_pid = pid.PID(out_min=-PITCH_ROLL_RANGE, out_max=PITCH_ROLL_RANGE)
     self._y_pid.SetSetpoint(self._y_target)
 
+    self._auto = False
+
   def _FindQuad(self, im):
     gray_im = cv2.cvtColor(im, cv2.COLOR_RGB2GRAY)
     gray_im = cv2.blur(gray_im, (5, 5))
     edges = cv2.Canny(gray_im, CANNY_THRESHOLD, CANNY_THRESHOLD * 3)
-    element = cv2.getStructuringElement(cv2.MORPH_CROSS, (5, 5))
+    element = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (15, 15))
     edges = cv2.dilate(edges, element)
 
     contours, _ = cv2.findContours(
@@ -69,22 +71,29 @@ class VideoPIDController(object):
       x, y = position
       roll = self._x_pid.Update(x)
       pitch = self._y_pid.Update(y)
+      sys.stderr.write('video pos: (%d, %d)  roll: %f  pitch: %f  %d\n' %
+                       (x, y, roll, pitch, self._auto))
+      cv2.putText(im, 'roll: %f' % roll, (2, 20),
+                  cv2.FONT_HERSHEY_PLAIN, 1.0, (0, 0, 0))
+      cv2.putText(im, 'pitch: %f' % pitch, (2, 40),
+                  cv2.FONT_HERSHEY_PLAIN, 1.0, (0, 0, 0))
     else:
       roll = 0
       pitch = 0
 
-    self._cfmonitor.SetSetpoint(roll, pitch, 0, self._thrust)
+    self._cfmonitor.SetRoll(roll)
+    self._cfmonitor.SetPitch(pitch)
 
     cv2.circle(im, (int(self._x_target), int(self._y_target)), 2, (0, 255, 0))
     cv2.imshow(self._window_name, im)
 
-  def SetThrust(self, thrust):
-    if thrust > 60000:
-      self._thrust = 60000
-    elif thrust < 0:
-      self._thrust = 0
-    else:
-      self._thrust = thrust
+  def SetAuto(self, auto):
+    self._auto = auto
 
-  def GetThrust(self):
-    return self._thrust
+
+if __name__ == '__main__':
+  im = cv2.imread('/home/mattgruskin/Pictures/Webcam/2013-08-12-103637.jpg')
+  v = VideoPIDController(None)
+  v._FindQuad(im)
+  cv2.imshow(v._window_name, im)
+  cv2.waitKey()
