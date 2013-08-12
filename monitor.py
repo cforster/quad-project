@@ -1,6 +1,8 @@
 import curses
+import cv2
 import logging
 import time
+import video_pid_controller
 
 import cfclient.utils.logconfigreader as logconfigreader
 import cflib.crazyflie as crazyflie
@@ -62,6 +64,9 @@ class CfMonitor(object):
       pos += field.width
     self._win.refresh()
 
+  def SetSetpoint(self, roll, pitch, yawrate, thrust):
+    self._cf.commander.send_setpoint(roll, pitch, yawrate, thrust)
+
 
 class CursesWindowLogHandler(logging.Handler):
   def __init__(self, win):
@@ -80,6 +85,7 @@ if __name__ == '__main__':
   curses.noecho()
   curses.cbreak()
   stdscr.keypad(1)
+  stdscr.nodelay(1)
 
   height, width = stdscr.getmaxyx()
   stdscr.hline(int(height * 0.5) - 1, 0, '=', width)
@@ -107,9 +113,24 @@ if __name__ == '__main__':
     cfmonitors.append(CfMonitor(uri, win))
     pos += 1
 
+  controller = video_pid_controller.VideoPIDController(cfmonitors[0])
+
   try:
     while True:
-      time.sleep(1)
+      controller.Step()
+      c = stdscr.getch()
+      if c != -1:
+        if c == ord('a'):
+          controller.SetThrust(controller.GetThrust() + 1000)
+        elif c == ord('z'):
+          controller.SetThrust(controller.GetThrust() - 1000)
+        elif c == ord('k'):
+          logger.info('Killing thrust')
+          controller.SetThrust(0)
+        elif c == ord('q'):
+          break
+      time.sleep(0.016)
+      cv2.waitKey(1)
   except KeyboardInterrupt:
     logger.info('Keyboard interrupt - shutting down')
   finally:
