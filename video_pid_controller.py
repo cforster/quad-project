@@ -1,7 +1,6 @@
 import cv2
 import logging
 import pid
-import sys
 
 logger = logging.getLogger('video_pid_controller')
 
@@ -74,8 +73,8 @@ class VideoPIDController(object):
       x, y = position
       roll = self._x_pid.Update(x)
       pitch = self._y_pid.Update(y)
-      sys.stderr.write('video pos: (%d, %d)  roll: %f  pitch: %f  %d\n' %
-                       (x, y, roll, pitch, self._auto))
+      logger.debug('video pos: (%d, %d)  roll: %f  pitch: %f  auto: %d',
+                   x, y, roll, pitch, self._auto)
       cv2.putText(im, 'roll: %f' % roll, (2, 20),
                   cv2.FONT_HERSHEY_PLAIN, 1.0, (0, 0, 0))
       cv2.putText(im, 'pitch: %f' % pitch, (2, 40),

@@ -1,9 +1,12 @@
-import curses
 import cv2
 import joystick_controller
 import logging
+import sys
 import time
 import video_pid_controller
+
+from PyQt4 import QtCore
+from PyQt4 import QtGui
 
 import cfclient.utils.logconfigreader as logconfigreader
 import cflib.crazyflie as crazyflie
@@ -26,23 +29,24 @@ FIELDS = [
     Field('PITCH', 10, 'stabilizer.pitch'),
     Field('YAW', 10, 'stabilizer.yaw'),
     Field('THRUST', 10, 'stabilizer.thrust', 'uint16_t'),
-    Field('PRESSURE', 10, 'altimeter.pressure'),
-    Field('MAG_X', 10, 'mag.x', 'int16_t'),
-    Field('MAG_Y', 10, 'mag.y', 'int16_t'),
-    Field('MAG_Z', 10, 'mag.z', 'int16_t'),
+    #Field('PRESSURE', 10, 'altimeter.pressure'),
+    #Field('MAG_X', 10, 'mag.x', 'int16_t'),
+    #Field('MAG_Y', 10, 'mag.y', 'int16_t'),
+    #Field('MAG_Z', 10, 'mag.z', 'int16_t'),
     Field('AUTO', 10)
 ]
 
 class CfMonitor(object):
-  def __init__(self, link_uri, win):
+  def __init__(self, index, link_uri, window):
     self._roll = 0.0
     self._pitch = 0.0
     self._yaw = 0.0
     self._thrust = 0
     self._auto = False
 
+    self._index = index
     self._link_uri = link_uri
-    self._win = win
+    self._window = window
     self._cf = crazyflie.Crazyflie()
     self._cf.connectSetupFinished.add_callback(self._onConnect)
     logger.info('Opening link to ' + link_uri)
@@ -66,9 +70,7 @@ class CfMonitor(object):
     logpacket.start()
 
   def _onLogData(self, data):
-    self._win.clear()
-    pos = 0
-    for field in FIELDS:
+    for i, field in enumerate(FIELDS):
       if field.var is None:
         if field.label == 'URI':
           s = self._link_uri
@@ -76,9 +78,7 @@ class CfMonitor(object):
           s = 'on' if self._auto else 'off'
       else:
         s = str(data[field.var])
-      self._win.addnstr(0, pos, s, field.width - 1)
-      pos += field.width
-    self._win.refresh()
+      self._window.SetTableItemText(self._index, i, s)
 
   def SetRoll(self, roll):
     self._roll = roll
@@ -97,50 +97,47 @@ class CfMonitor(object):
         self._roll, self._pitch, self._yaw, self._thrust)
 
 
-class CursesWindowLogHandler(logging.Handler):
-  def __init__(self, win):
-    logging.Handler.__init__(self)
-    self._win = win
+class CfMonitorWindow(QtGui.QWidget):
+  def __init__(self):
+    super(CfMonitorWindow, self).__init__()
+    self.setWindowTitle('Crazyflie Monitor')
 
-  def emit(self, record):
-    self._win.insertln()
-    self._win.addstr(0, 0, self.format(record))
-    self._win.refresh()
+    self._table = QtGui.QTableWidget(self)
+    self._table.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
+    self._table.setColumnCount(len(FIELDS))
+    self._table.setRowCount(len(LINK_URIS))
+    self._table.setHorizontalHeaderLabels([f.label for f in FIELDS])
+    for c, field in enumerate(FIELDS):
+      self._table.setColumnWidth(c, field.width * 10)
+    for r in xrange(self._table.rowCount()):
+      for c in xrange(self._table.columnCount()):
+        self._table.setItem(r, c, QtGui.QTableWidgetItem())
+
+    self._vbox = QtGui.QVBoxLayout()
+    self._vbox.addStretch(1)
+    self._vbox.addWidget(self._table)
+    self.setLayout(self._vbox)
+
+    self.setGeometry(100, 100, 600, 200)
+    self.show()
+
+  def SetTableItemText(self, row, col, text):
+    self._table.item(row, col).setText(text)
 
 
 if __name__ == '__main__':
-  stdscr = curses.initscr()
-  curses.curs_set(0)
-  curses.noecho()
-  curses.cbreak()
-  stdscr.keypad(1)
-  stdscr.nodelay(1)
+  logging.basicConfig(
+      level=logging.INFO,
+      format='%(asctime)s %(levelname).1s %(module)-12.12s %(message)s')
 
-  height, width = stdscr.getmaxyx()
-  stdscr.hline(int(height * 0.5) - 1, 0, '=', width)
-
-  logwin = curses.newwin(int(height * 0.5), width, int(height * 0.5), 0)
-  log_handler = CursesWindowLogHandler(logwin)
-  log_handler.setFormatter(logging.Formatter(
-      fmt='%(asctime)s %(levelname).1s %(module)-12s %(message)s'))
-  root_logger = logging.getLogger('')
-  root_logger.setLevel(logging.INFO)
-  root_logger.addHandler(log_handler)
-
-  pos = 0
-  for field in FIELDS:
-    stdscr.addstr(0, pos, field.label)
-    pos += field.width
-  stdscr.refresh()
+  app = QtGui.QApplication(sys.argv)
+  window = CfMonitorWindow()
 
   crtp.init_drivers()
 
   cfmonitors = []
-  pos = 1
-  for uri in LINK_URIS:
-    win = curses.newwin(1, width, pos, 0)
-    cfmonitors.append(CfMonitor(uri, win))
-    pos += 1
+  for i, uri in enumerate(LINK_URIS):
+    cfmonitors.append(CfMonitor(i, uri, window))
 
   video_controller = video_pid_controller.VideoPIDController(cfmonitors[0])
   joy_controller = joystick_controller.JoystickController(cfmonitors[0])
@@ -154,20 +151,10 @@ if __name__ == '__main__':
       joy_controller.Step()
       for cfmonitor in cfmonitors:
         cfmonitor.UpdateCommander()
-      c = stdscr.getch()
-      if c != -1:
-        if c == ord('q'):
-          break
       time.sleep(0.016)
       cv2.waitKey(1)
   except KeyboardInterrupt:
     logger.info('Keyboard interrupt - shutting down')
   finally:
-    logger.error('finally')
     for cfmonitor in cfmonitors:
       cfmonitor.Shutdown()
-    stdscr.keypad(0)
-    curses.nocbreak()
-    curses.echo()
-    curses.curs_set(1)
-    curses.endwin()
