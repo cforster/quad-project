@@ -19,10 +19,15 @@ class VideoPIDController(object):
 
     self._x_target = self._width / 2
     self._y_target = self._height / 2
-    self._x_pid = pid.PID(out_min=-PITCH_ROLL_RANGE, out_max=PITCH_ROLL_RANGE)
+    self._x_pid = pid.PID(kp=0.5, ki=0.2, kd=1.1, integ_max=100.0,
+                          out_min=-PITCH_ROLL_RANGE, out_max=PITCH_ROLL_RANGE)
     self._x_pid.SetSetpoint(self._x_target)
-    self._y_pid = pid.PID(out_min=-PITCH_ROLL_RANGE, out_max=PITCH_ROLL_RANGE)
+    self._y_pid = pid.PID(kp=0.5, ki=0.2, kd=1.1, integ_max=100.0,
+                          out_min=-PITCH_ROLL_RANGE, out_max=PITCH_ROLL_RANGE)
     self._y_pid.SetSetpoint(self._y_target)
+
+    self._x_pid.CreateWindow('x')
+    self._y_pid.CreateWindow('y')
 
     self._auto = False
 

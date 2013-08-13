@@ -94,10 +94,11 @@ class Xbox360ControllerLinuxJoystick(BaseJoystick):
     return self._joystick.get_axis(self._yaw_axis)
   
   def getThrust(self):
+    thrust = self._joystick.get_axis(self._thrust_axis)
     # axis initializes to 0 not -1
     if thrust == 0.0 and self._initial_thrust_flag:
       return 0.0;
     else:
       self._initial_thrust_flag = False
       # axis range from -1 (not pressed) to 1 (pressed)
-      return (self._joystick.get_axis(self._thrust_axis) + 1) / 2
+      return (thrust + 1) / 2

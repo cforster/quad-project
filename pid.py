@@ -1,6 +1,8 @@
 import logging
 import time
 
+from PyQt4 import QtGui
+
 logger = logging.getLogger('pid')
 
 class PID(object):
@@ -50,11 +52,40 @@ class PID(object):
     self._last_error = error
     return output
 
+  def CreateWindow(self, name):
+    self._window = QtGui.QWidget()
+    self._window.setWindowTitle('PID ' + name)
+    grid = QtGui.QGridLayout()
+    grid.addWidget(QtGui.QLabel('KP', self._window), 0, 0)
+    edit = QtGui.QLineEdit(self._window)
+    edit.setText('%f' % self._kp)
+    def SetKP(text):
+      self._kp = float(text)
+    edit.textChanged[str].connect(SetKP)
+    grid.addWidget(edit, 0, 1)
+    grid.addWidget(QtGui.QLabel('KI', self._window), 1, 0)
+    edit = QtGui.QLineEdit(self._window)
+    edit.setText('%f' % self._ki)
+    def SetKI(text):
+      self._ki = float(text)
+    edit.textChanged[str].connect(SetKI)
+    grid.addWidget(edit, 1, 1)
+    grid.addWidget(QtGui.QLabel('KD', self._window), 2, 0)
+    edit = QtGui.QLineEdit(self._window)
+    edit.setText('%f' % self._kd)
+    def SetKD(text):
+      self._kd = float(text)
+    edit.textChanged[str].connect(SetKD)
+    grid.addWidget(edit, 2, 1)
+    self._window.setLayout(grid)
+    self._window.show()
+
 if __name__ == '__main__':
   # test the PID controller
   import random
   logging.basicConfig(level=logging.DEBUG)
   p = PID()
+
   p.SetSetpoint(100)
   pos = 50
   velocity = 1

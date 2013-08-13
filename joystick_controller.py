@@ -46,10 +46,9 @@ class JoystickController(object):
       pitch = self._joystick.getPitch() * self._pitch_range
       yaw = self._joystick.getYaw() * self._yaw_range
       thrust = self._joystick.getThrust() * self._thrust_max
-      if not self._auto:
-        self._cfmonitor.SetRoll(roll)
-        self._cfmonitor.SetPitch(pitch)
-        self._cfmonitor.SetYaw(yaw)
+      self._cfmonitor.SetRoll(roll)
+      self._cfmonitor.SetPitch(pitch)
+      self._cfmonitor.SetYaw(yaw)
       self._cfmonitor.SetThrust(int(thrust))
 
   def GetAuto(self):
