@@ -1,6 +1,7 @@
 import cv2
 import joystick_controller
 import logging
+import pressure_thrust_controller
 import sys
 import time
 import video_pid_controller
@@ -14,7 +15,7 @@ import cflib.crtp as crtp
 
 logger = logging.getLogger('monitor')
 
-LINK_URIS = ['radio://0/6/250K']
+LINK_URIS = ['radio://0/4/250K']
 
 class Field(object):
   def __init__(self, label, width, var=None, vartype='float'):
@@ -29,7 +30,7 @@ FIELDS = [
     Field('PITCH', 10, 'stabilizer.pitch'),
     Field('YAW', 10, 'stabilizer.yaw'),
     Field('THRUST', 10, 'stabilizer.thrust', 'uint16_t'),
-    #Field('PRESSURE', 10, 'altimeter.pressure'),
+    Field('PRESSURE', 10, 'altimeter.pressure'),
     #Field('MAG_X', 10, 'mag.x', 'int16_t'),
     #Field('MAG_Y', 10, 'mag.y', 'int16_t'),
     #Field('MAG_Z', 10, 'mag.z', 'int16_t'),
@@ -42,6 +43,7 @@ class CfMonitor(object):
     self._pitch = 0.0
     self._yaw = 0.0
     self._thrust = 0
+    self._pressure = 0
     self._auto = False
 
     self._index = index
@@ -70,6 +72,7 @@ class CfMonitor(object):
     logpacket.start()
 
   def _onLogData(self, data):
+    self._pressure = data['altimeter.pressure']
     for i, field in enumerate(FIELDS):
       if field.var is None:
         if field.label == 'URI':
@@ -79,6 +82,12 @@ class CfMonitor(object):
       else:
         s = str(data[field.var])
       self._window.SetTableItemText(self._index, i, s)
+
+  def GetPressure(self):
+    return self._pressure
+
+  def GetThrust(self):
+    return self._thrust
 
   def SetRoll(self, roll):
     self._roll = roll
@@ -141,14 +150,18 @@ if __name__ == '__main__':
 
   video_controller = video_pid_controller.VideoPIDController(cfmonitors[0])
   joy_controller = joystick_controller.JoystickController(cfmonitors[0])
+  pressure_thrust_controller = (
+      pressure_thrust_controller.PressureThrustController(cfmonitors[0]))
 
   try:
     while True:
       auto = joy_controller.GetAuto()
       cfmonitors[0]._auto = auto
       video_controller.SetAuto(auto)
+      pressure_thrust_controller.SetAuto(auto)
       video_controller.Step()
       joy_controller.Step()
+      pressure_thrust_controller.Step()
       for cfmonitor in cfmonitors:
         cfmonitor.UpdateCommander()
       time.sleep(0.016)
