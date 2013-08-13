@@ -41,8 +41,10 @@ class JoystickController(object):
       if event.type == pygame.JOYBUTTONDOWN:
         if event.button == self._thrust_max_button:
           self._thrust_max += 500
+          logger.info('trim thrust_max to %d', self._thrust_max)
         elif event.button == self._thrust_min_button:
           self._thrust_max -= 500
+          logger.info('trim thrust_max to %d', self._thrust_max)
         elif event.button == self._switch_button:
           self._auto = not self._auto
     if self._joystick is not None:
