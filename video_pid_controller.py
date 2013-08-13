@@ -66,7 +66,10 @@ class VideoPIDController(object):
     self._capture.grab()
     result, im = self._capture.retrieve()
 
-    position = self._FindQuad(im)
+    if im is not None:
+      position = self._FindQuad(im)
+    else:
+      position = None
     if position is not None:
       x, y = position
       roll = self._x_pid.Update(x)
@@ -84,8 +87,9 @@ class VideoPIDController(object):
     self._cfmonitor.SetRoll(roll)
     self._cfmonitor.SetPitch(pitch)
 
-    cv2.circle(im, (int(self._x_target), int(self._y_target)), 2, (0, 255, 0))
-    cv2.imshow(self._window_name, im)
+    if im is not None:
+      cv2.circle(im, (int(self._x_target), int(self._y_target)), 2, (0, 255, 0))
+      cv2.imshow(self._window_name, im)
 
   def SetAuto(self, auto):
     self._auto = auto

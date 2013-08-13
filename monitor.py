@@ -11,7 +11,7 @@ import cflib.crtp as crtp
 
 logger = logging.getLogger('monitor')
 
-LINK_URIS = ['radio://0/10/250K']
+LINK_URIS = ['radio://0/6/250K']
 
 class Field(object):
   def __init__(self, label, width, var=None, vartype='float'):
@@ -26,6 +26,10 @@ FIELDS = [
     Field('PITCH', 10, 'stabilizer.pitch'),
     Field('YAW', 10, 'stabilizer.yaw'),
     Field('THRUST', 10, 'stabilizer.thrust', 'uint16_t'),
+    Field('PRESSURE', 10, 'altimeter.pressure'),
+    Field('MAG_X', 10, 'mag.x', 'int16_t'),
+    Field('MAG_Y', 10, 'mag.y', 'int16_t'),
+    Field('MAG_Z', 10, 'mag.z', 'int16_t'),
     Field('AUTO', 10)
 ]
 
