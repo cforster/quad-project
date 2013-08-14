@@ -42,14 +42,14 @@ class CompassYawController(object):
     raw_x = float(self._cfmonitor.GetMagX())
     raw_y = float(self._cfmonitor.GetMagY())
 
-    if self._target_x is None:
+    if self._min_x is None:
       if raw_x == 0.0:
         return
       self._target_x = raw_x
       self._min_x = self._target_x
       self._max_x = self._target_x
 
-    if self._target_y is None:
+    if self._min_y is None:
       if raw_y == 0.0:
         return
       self._target_y = raw_y
