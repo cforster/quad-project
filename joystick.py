@@ -4,7 +4,8 @@ import pygame
 logger = logging.getLogger('joystick')
 
 class BaseJoystick(object):
-  def __init__(self, id, thrust_max_button, thrust_min_button, switch_button):
+  def __init__(self, id, thrust_max_button, thrust_min_button,
+               switch_button, set_button):
     self._joystick = pygame.joystick.Joystick(id)
     self._joystick.init()
     logger.info('Joystick axes=%d buttons=%d',
@@ -15,6 +16,7 @@ class BaseJoystick(object):
     self._thrust_min_button = thrust_min_button
 
     self._switch_button = switch_button
+    self._set_button = set_button
 
   def getRoll(self):
     raise NotImplementedError("Should have implemented getRoll")
@@ -37,12 +39,16 @@ class BaseJoystick(object):
   def getSwitchButton(self):
     return self._switch_button
 
+  def getSetButton(self):
+    return self._set_button
+
 class Xbox360ControllerWindowsJoystick(BaseJoystick):
   def __init__(self, id):
     BaseJoystick.__init__(self, id,
                           3, # thrust_max_button: Y
                           0, # thrust_min_button: A
-                          1 # switch_button: B
+                          1, # switch_button: B
+                          2  # set_button: X
     )
     
     self._roll_axis = 0 # Left stick right/left
@@ -71,7 +77,8 @@ class Xbox360ControllerLinuxJoystick(BaseJoystick):
     BaseJoystick.__init__(self, id,
                           3, # thrust_max_button: Y
                           0, # thrust_min_button: A
-                          1 # switch_button: B
+                          1, # switch_button: B
+                          2  # set_button: X
     )
       
     self._initial_thrust_flag = True

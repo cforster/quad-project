@@ -16,6 +16,7 @@ class VideoPIDController(object):
     self._capture.open(camera_index)
     self._width = self._capture.get(3)
     self._height = self._capture.get(4)
+    logger.debug('width: %d, height: %d', self._width, self._height)
 
     self._x_target = self._width / 2
     self._y_target = self._height / 2
@@ -26,8 +27,8 @@ class VideoPIDController(object):
                           out_min=-PITCH_ROLL_RANGE, out_max=PITCH_ROLL_RANGE)
     self._y_pid.SetSetpoint(self._y_target)
 
-    self._x_pid.CreateWindow('x')
-    self._y_pid.CreateWindow('y')
+    #self._x_pid.CreateWindow('x')
+    #self._y_pid.CreateWindow('y')
 
     self._auto = False
 

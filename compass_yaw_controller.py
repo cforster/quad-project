@@ -9,8 +9,9 @@ YAW_RANGE = 100
 class CompassYawController(object):
   def __init__(self, cfmonitor):
     self._cfmonitor = cfmonitor
-    self._pid = pid.PID(kp=100.0, ki=10.0, kd=0.0, integ_max=100.0,
+    self._pid = pid.PID(kp=100.0, ki=0.0, kd=0.0, integ_max=100.0,
                         out_min=-YAW_RANGE, out_max=YAW_RANGE)
+    self._pid.CreateWindow('yaw')
     self._target_x = None
     self._target_y = None
     self._min_x = self._target_x
@@ -32,6 +33,10 @@ class CompassYawController(object):
       return 0.0
     return (y - self._min_y) / (self._max_y - self._min_y) * 2.0 - 1.0
 
+  def SetTarget(self):
+    self._target_x = float(self._cfmonitor.GetMagX())
+    self._target_y = float(self._cfmonitor.GetMagY())
+    
   def Step(self):
     thrust = self._cfmonitor.GetThrust()
     raw_x = float(self._cfmonitor.GetMagX())

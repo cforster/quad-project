@@ -16,7 +16,7 @@ import cflib.crtp as crtp
 
 logger = logging.getLogger('monitor')
 
-LINK_URIS = ['radio://0/14/250K']
+LINK_URIS = ['radio://0/8/250K']
 
 class Field(object):
   def __init__(self, label, width, var=None, vartype='float'):
@@ -149,7 +149,8 @@ if __name__ == '__main__':
   logging.basicConfig(
       level=logging.INFO,
       format='%(asctime)s %(levelname).1s %(module)-12.12s %(message)s')
-
+      #filename='log.txt')
+  
   app = QtGui.QApplication(sys.argv)
   window = CfMonitorWindow()
 
@@ -160,11 +161,15 @@ if __name__ == '__main__':
     cfmonitors.append(CfMonitor(i, uri, window))
 
   video_controller = video_pid_controller.VideoPIDController(cfmonitors[0])
-  joy_controller = joystick_controller.JoystickController(cfmonitors[0])
   pressure_thrust_controller = (
       pressure_thrust_controller.PressureThrustController(cfmonitors[0]))
   compass_yaw_controller = (
       compass_yaw_controller.CompassYawController(cfmonitors[0]))
+
+  def SetButtonPressed():
+    compass_yaw_controller.SetTarget()
+  joy_controller = joystick_controller.JoystickController(cfmonitors[0],
+                                                          SetButtonPressed)
 
   try:
     while True:
@@ -174,8 +179,8 @@ if __name__ == '__main__':
       pressure_thrust_controller.SetAuto(auto)
       compass_yaw_controller.SetAuto(auto)
       joy_controller.Step()
-      video_controller.Step()
-      pressure_thrust_controller.Step()
+      #video_controller.Step()
+      #pressure_thrust_controller.Step()
       compass_yaw_controller.Step()
       for cfmonitor in cfmonitors:
         cfmonitor.UpdateCommander()

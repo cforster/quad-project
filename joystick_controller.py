@@ -6,7 +6,7 @@ import sys
 logger = logging.getLogger('joystick_controller')
 
 class JoystickController(object):
-  def __init__(self, cfmonitor):
+  def __init__(self, cfmonitor, set_button_callback):
     self._cfmonitor = cfmonitor
     pygame.display.init()
     pygame.joystick.init()
@@ -28,6 +28,7 @@ class JoystickController(object):
     self._thrust_max = 44000
 
     self._auto = False
+    self._set_button_callback = set_button_callback
 
   def Step(self):
     for event in pygame.event.get():
@@ -40,6 +41,8 @@ class JoystickController(object):
           logger.info('trim thrust_max to %d', self._thrust_max)
         elif event.button == self._joystick.getSwitchButton():
           self._auto = not self._auto
+        elif event.button == self._joystick.getSetButton():
+          self._set_button_callback()
         
     if self._joystick is not None:
       roll = self._joystick.getRoll() * self._roll_range
