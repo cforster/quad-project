@@ -15,7 +15,7 @@ class PID(object):
     self._out_max = out_max
     self._out_min = out_min
 
-    self._setpoint = 0
+    self._setpoint = 0.0
     self._last_error = 0.0
     self._integral = 0.0
     self._last_update_time = time.time()

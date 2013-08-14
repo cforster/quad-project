@@ -9,7 +9,7 @@ YAW_RANGE = 100
 class CompassYawController(object):
   def __init__(self, cfmonitor):
     self._cfmonitor = cfmonitor
-    self._pid = pid.PID(kp=30.0, ki=0.0, kd=100.0, integ_max=100.0,
+    self._pid = pid.PID(kp=100.0, ki=10.0, kd=0.0, integ_max=100.0,
                         out_min=-YAW_RANGE, out_max=YAW_RANGE)
     self._target_x = None
     self._target_y = None
@@ -33,6 +33,7 @@ class CompassYawController(object):
     return (y - self._min_y) / (self._max_y - self._min_y) * 2.0 - 1.0
 
   def Step(self):
+    thrust = self._cfmonitor.GetThrust()
     raw_x = float(self._cfmonitor.GetMagX())
     raw_y = float(self._cfmonitor.GetMagY())
 
@@ -67,34 +68,55 @@ class CompassYawController(object):
     angle = math.atan2(y, x)
     target_angle = math.atan2(target_y, target_x)
 
-    if self._auto:
-      self._pid.SetSetpoint(target_angle)
-      yaw = self._pid.Update(angle)
-      logger.info('angle: %f  target angle: %f  yaw: %f',
-                  angle, target_angle, yaw)
+    if self._auto and thrust > 0:
+      input_angle = angle - target_angle
+      if input_angle > math.pi:
+        input_angle -= 2 * math.pi
+      elif input_angle < -math.pi:
+        input_angle += 2 * math.pi
+      yaw = self._pid.Update(input_angle)
+      logger.info('angle: %f  target angle: %f  input_angle: %f  yaw: %f',
+                  angle, target_angle, input_angle, yaw)
       self._cfmonitor.SetYaw(yaw)
 
 if __name__ == '__main__':
+  import random
   class TestCf(object):
     def __init__(self):
       self.x = 100
       self.y = 200
+      self.yaw = 0.0
     def SetYaw(self, yaw):
-      print yaw
+      self.yaw = yaw
     def GetMagX(self):
       return self.x
     def GetMagY(self):
       return self.y
 
+  logging.basicConfig(
+      level=logging.INFO,
+      format='%(asctime)s %(levelname).1s %(module)-12.12s %(message)s')
+
   test_cf = TestCf()
   cy = CompassYawController(test_cf)
+  cy.SetAuto(True)
+  test_cf.x = 100
+  test_cf.y = 0
   cy.Step()
-  test_cf.x = 200
-  test_cf.y = 300
-  cy.Step()
-  test_cf.x = 0
-  test_cf.y = 100
-  cy.Step()
-  test_cf.x = 80
-  test_cf.y = 150
-  cy.Step()
+  logger.info('calibrate')
+  for i in xrange(36):
+    test_cf.x = int(100 * math.cos(i * 10 * math.pi / 180.0))
+    test_cf.y = int(100 * math.sin(i * 10 * math.pi / 180.0))
+    cy.Step()
+  logger.info('rotate again')
+  for i in xrange(36):
+    test_cf.x = int(100 * math.cos(i * 10 * math.pi / 180.0))
+    test_cf.y = int(100 * math.sin(i * 10 * math.pi / 180.0))
+    cy.Step()
+  logger.info('stabilize')
+  angle = 90.0
+  for i in xrange(500):
+    test_cf.x = int(100 * math.cos(angle * math.pi / 180.0))
+    test_cf.y = int(100 * math.sin(angle * math.pi / 180.0))
+    cy.Step()
+    angle -= (test_cf.yaw * 0.1) + random.uniform(-2,1)
