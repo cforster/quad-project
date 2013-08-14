@@ -88,8 +88,9 @@ class VideoPIDController(object):
       roll = 0
       pitch = 0
 
-    self._cfmonitor.SetRoll(roll)
-    self._cfmonitor.SetPitch(pitch)
+    if self._auto:
+      self._cfmonitor.SetRoll(roll)
+      self._cfmonitor.SetPitch(pitch)
 
     if im is not None:
       cv2.circle(im, (int(self._x_target), int(self._y_target)), 2, (0, 255, 0))
