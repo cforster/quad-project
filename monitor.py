@@ -16,7 +16,7 @@ import cflib.crtp as crtp
 
 logger = logging.getLogger('monitor')
 
-LINK_URIS = ['radio://0/8/250K']
+LINK_URIS = ['radio://0/10/1M']
 
 class Field(object):
   def __init__(self, label, width, var=None, vartype='float'):
@@ -27,14 +27,17 @@ class Field(object):
 
 FIELDS = [
     Field('URI', 16),
-    Field('ROLL', 10, 'stabilizer.roll'),
-    Field('PITCH', 10, 'stabilizer.pitch'),
-    Field('YAW', 10, 'stabilizer.yaw'),
+    #Field('ROLL', 10, 'stabilizer.roll'),
+    #Field('PITCH', 10, 'stabilizer.pitch'),
+    #Field('YAW', 10, 'stabilizer.yaw'),
     Field('THRUST', 10, 'stabilizer.thrust', 'uint16_t'),
     Field('PRESSURE', 10, 'altimeter.pressure'),
-    Field('MAG_X', 10, 'mag.x', 'int16_t'),
-    Field('MAG_Y', 10, 'mag.y', 'int16_t'),
-    Field('MAG_Z', 10, 'mag.z', 'int16_t'),
+    Field('MAG_X', 6, 'mag.x', 'int16_t'),
+    Field('MAG_Y', 6, 'mag.y', 'int16_t'),
+    Field('MAG_Z', 6, 'mag.z', 'int16_t'),
+    Field('ACC_X', 6, 'acc.x'),
+    Field('ACC_Y', 6, 'acc.y'),
+    Field('ACC_Z', 6, 'acc.z'),
     Field('AUTO', 10)
 ]
 
@@ -47,6 +50,10 @@ class CfMonitor(object):
     self._pressure = 0
     self._mag_x = 0
     self._mag_y = 0
+    self._mag_z = 0
+    self._acc_x = 0.0
+    self._acc_y = 0.0
+    self._acc_z = 0.0
     self._auto = False
 
     self._index = index
@@ -78,6 +85,10 @@ class CfMonitor(object):
     self._pressure = data['altimeter.pressure']
     self._mag_x = data['mag.x']
     self._mag_y = data['mag.y']
+    self._mag_z = data['mag.z']
+    self._acc_x = data['acc.x']
+    self._acc_y = data['acc.y']
+    self._acc_z = data['acc.z']
     for i, field in enumerate(FIELDS):
       if field.var is None:
         if field.label == 'URI':
@@ -96,6 +107,18 @@ class CfMonitor(object):
 
   def GetMagY(self):
     return self._mag_y
+
+  def GetMagZ(self):
+    return self._mag_z
+
+  def GetAccX(self):
+    return self._acc_x
+
+  def GetAccY(self):
+    return self._acc_y
+
+  def GetAccZ(self):
+    return self._acc_z
 
   def GetThrust(self):
     return self._thrust
@@ -179,7 +202,7 @@ if __name__ == '__main__':
       pressure_thrust_controller.SetAuto(auto)
       compass_yaw_controller.SetAuto(auto)
       joy_controller.Step()
-      #video_controller.Step()
+      video_controller.Step()
       #pressure_thrust_controller.Step()
       compass_yaw_controller.Step()
       for cfmonitor in cfmonitors:

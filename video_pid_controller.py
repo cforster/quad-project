@@ -27,8 +27,8 @@ class VideoPIDController(object):
                           out_min=-PITCH_ROLL_RANGE, out_max=PITCH_ROLL_RANGE)
     self._y_pid.SetSetpoint(self._y_target)
 
-    #self._x_pid.CreateWindow('x')
-    #self._y_pid.CreateWindow('y')
+    self._x_pid.CreateWindow('x')
+    self._y_pid.CreateWindow('y')
 
     self._auto = False
 

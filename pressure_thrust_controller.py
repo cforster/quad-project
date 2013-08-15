@@ -12,6 +12,7 @@ class PressureThrustController(object):
     self._target_pressure = 100.0
     self._thrust_center = 40000
     self._auto = False
+    self._pid.CreateWindow('thrust')
 
   def SetAuto(self, auto):
     if auto and not self._auto:
